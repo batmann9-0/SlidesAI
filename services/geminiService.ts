@@ -2,7 +2,8 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { PresentationData } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+// Always use the specified initialization format
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const generateSlidesFromText = async (rawText: string): Promise<PresentationData> => {
   const response = await ai.models.generateContent({
@@ -43,8 +44,9 @@ export const generateSlidesFromText = async (rawText: string): Promise<Presentat
   });
 
   try {
-    const data = JSON.parse(response.text || '{}');
-    return data as PresentationData;
+    // Extract text property directly as per guidelines
+    const jsonStr = response.text?.trim() || '{}';
+    return JSON.parse(jsonStr) as PresentationData;
   } catch (error) {
     console.error("Failed to parse Gemini response:", error);
     throw new Error("Failed to structure presentation data.");
@@ -52,16 +54,32 @@ export const generateSlidesFromText = async (rawText: string): Promise<Presentat
 };
 
 export const generateImage = async (prompt: string): Promise<string> => {
-  const response = await ai.models.generateImages({
-    model: 'imagen-4.0-generate-001',
-    prompt: `A professional, corporate-style high-quality presentation visual: ${prompt}`,
+  // Use gemini-2.5-flash-image by default for image generation as per guidelines
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash-image',
+    contents: {
+      parts: [
+        {
+          text: `A professional, corporate-style high-quality presentation visual: ${prompt}`,
+        },
+      ],
+    },
     config: {
-      numberOfImages: 1,
-      outputMimeType: 'image/jpeg',
-      aspectRatio: '16:9',
+      imageConfig: {
+        aspectRatio: "16:9",
+      },
     },
   });
 
-  const base64EncodeString = response.generatedImages[0].image.imageBytes;
-  return `data:image/jpeg;base64,${base64EncodeString}`;
+  // Iterate through parts to find the image part as per guidelines
+  if (response.candidates?.[0]?.content?.parts) {
+    for (const part of response.candidates[0].content.parts) {
+      if (part.inlineData) {
+        const base64EncodeString = part.inlineData.data;
+        return `data:image/png;base64,${base64EncodeString}`;
+      }
+    }
+  }
+  
+  throw new Error("No image data found in model response");
 };
