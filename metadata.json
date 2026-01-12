@@ -1,0 +1,7 @@
+{
+  "name": "Copy of SlideCraft AI",
+  "description": "A professional AI-powered presentation builder that transforms raw text into structured, aesthetically pleasing PowerPoint slides with one click.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
